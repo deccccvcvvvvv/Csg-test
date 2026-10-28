@@ -1,0 +1,143 @@
+name: Build & Release GC5 Mobile Mod
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_mode:
+        description: "Input Mode"
+        required: true
+        type: choice
+        default: "complete_apk"
+        options:
+          - "complete_apk"
+          - "asset_patch"
+      apk_source:
+        description: "APK Source (Direct download URL or workspace path)"
+        required: true
+        type: string
+      patch_source:
+        description: "Patch Source (URL or path for Mode B, optional for Mode A)"
+        required: false
+        type: string
+        default: ""
+      expected_sha256:
+        description: "Expected SHA-256 checksum of input APK (optional verification)"
+        required: false
+        type: string
+        default: ""
+      release_tag:
+        description: "Release Tag (e.g. v4.4-mod-1.0.0, leave blank for auto-timestamp)"
+        required: false
+        type: string
+        default: ""
+      release_title:
+        description: "Release Title"
+        required: false
+        type: string
+        default: ""
+      is_prerelease:
+        description: "Mark as Pre-release"
+        required: false
+        type: boolean
+        default: false
+      allow_fallback_debug_signing:
+        description: "Allow temporary debug signing if secrets are missing (testing only)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Package, Sign & Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository Automation Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 📦 Install Android Build & Signing Tools
+        run: |
+          echo "🔧 Installing Android SDK build tools (zipalign, apksigner, aapt2)..."
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zipalign apksigner aapt
+          python -m pip install --upgrade pip
+          pip install UnityPy Pillow
+
+      - name: 🔍 Step 1: Validate Workflow Inputs
+        id: validate_inputs
+        env:
+          INPUT_MODE: ${{ inputs.input_mode }}
+          APK_SOURCE: ${{ inputs.apk_source }}
+          PATCH_SOURCE: ${{ inputs.patch_source }}
+          EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TITLE: ${{ inputs.release_title }}
+        run: |
+          chmod +x scripts/*.sh scripts/*.py
+          ./scripts/validate_input.sh
+
+      - name: 📥 Step 2: Retrieve & Inspect Input Files
+        id: prepare_input
+        env:
+          INPUT_MODE: ${{ inputs.input_mode }}
+          APK_SOURCE: ${{ inputs.apk_source }}
+          PATCH_SOURCE: ${{ inputs.patch_source }}
+          EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+        run: |
+          ./scripts/prepare_input.sh
+
+      - name: 🧩 Step 2b (Mode B): Route & Inspect Asset Patches
+        if: ${{ inputs.input_mode == 'asset_patch' }}
+        run: |
+          python3 ./scripts/patch_unity_assets.py "${{ steps.prepare_input.outputs.target_patch_dir }}"
+
+      - name: 📦 Step 3: Package & Align APK
+        id: package_apk
+        env:
+          INPUT_MODE: ${{ inputs.input_mode }}
+        run: |
+          ./scripts/package_apk.sh
+
+      - name: 🔐 Step 4: Securely Sign APK
+        id: sign_apk
+        env:
+          ALLOW_FALLBACK_DEBUG_SIGNING: ${{ inputs.allow_fallback_debug_signing }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./scripts/sign_apk.sh
+
+      - name: 🔬 Step 5: Validate Final APK & Audit Cryptographic Signature
+        id: validate_output
+        run: |
+          ./scripts/validate_output.sh
+
+      - name: 🚀 Step 6: Create GitHub Release & Upload Final APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.validate_inputs.outputs.validated_release_tag }}
+          name: ${{ steps.validate_inputs.outputs.validated_release_title }}
+          body_path: ${{ steps.validate_output.outputs.release_notes_path }}
+          prerelease: ${{ inputs.is_prerelease }}
+          draft: false
+          files: |
+            ${{ steps.validate_output.outputs.final_apk_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

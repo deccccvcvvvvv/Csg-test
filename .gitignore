@@ -1,0 +1,51 @@
+# Large Binaries & APKs
+*.apk
+*.aab
+*.zip
+*.tar.gz
+*.7z
+
+# Keystores & Signing Credentials (CRITICAL: NEVER COMMIT)
+*.keystore
+*.jks
+*.p12
+*.pem
+*.pk8
+signing.properties
+keystore.env
+
+# Unity & Game Assets
+*.unity3d
+*.resource
+*.bundle
+*.assets
+*.dat
+*.so
+build/
+dist/
+temp/
+output/
+extracted/
+
+# Environment & Secret Configuration
+.env
+.env.local
+config/build-config.local
+secrets/
+
+# Python & Build Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+pip-wheel-metadata/
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

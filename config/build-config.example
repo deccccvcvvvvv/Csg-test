@@ -1,0 +1,52 @@
+# ==============================================================================
+# GC5 Mobile Mod - Build & Automation Configuration Template
+# ==============================================================================
+# Copy this file to config/build-config.env or set these variables in
+# your GitHub Actions workflow environment.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Game Identification & Version Bounds
+# ------------------------------------------------------------------------------
+APP_PACKAGE_NAME="com.grandcriminalonline.gc5"
+EXPECTED_UNITY_VERSION="2021.3.45f1"
+EXPECTED_SCRIPTING_BACKEND="IL2CPP"
+MAX_EXPECTED_APK_SIZE_MB=800
+MIN_EXPECTED_APK_SIZE_MB=400
+
+# ------------------------------------------------------------------------------
+# Release Settings
+# ------------------------------------------------------------------------------
+DEFAULT_RELEASE_TAG_PREFIX="v4.4-mod"
+DEFAULT_RELEASE_TITLE_PREFIX="GC5 v4.4 Custom UI Mod"
+GENERATE_CHANGELOG=true
+PRERELEASE=false
+# Whether to draft the release for manual publish review (true) or publish immediately (false)
+DRAFT_RELEASE=false
+
+# ------------------------------------------------------------------------------
+# Signing Configuration Defaults
+# ------------------------------------------------------------------------------
+# Production signing requires GitHub Secrets:
+#   KEYSTORE_BASE64: Base64-encoded JKS or PKCS12 keystore file
+#   KEYSTORE_PASSWORD: Password for the keystore
+#   KEY_ALIAS: Alias name of the signing key
+#   KEY_PASSWORD: Password for the private key
+#
+# If set to 'true', the workflow will generate a temporary one-time debug key
+# if secrets are not provided. Set to 'false' in production to enforce real signatures.
+ALLOW_FALLBACK_DEBUG_SIGNING=false
+
+# Signature schemes to enforce (v1=JAR, v2=APK Signature Scheme v2, v3=v3 scheme)
+SIGN_V1=true
+SIGN_V2=true
+SIGN_V3=true
+SIGN_V4=false
+
+# ------------------------------------------------------------------------------
+# Repackaging & Tooling Settings
+# ------------------------------------------------------------------------------
+ZIPALIGN_PAGE_ALIGNMENT=4
+# Keep .so uncompressed and page-aligned for direct mmap execution
+KEEP_SO_UNCOMPRESSED=true
+COMPRESSION_LEVEL=9
